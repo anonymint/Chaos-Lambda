@@ -69,10 +69,9 @@ provider "aws" {
 terraform {
   backend "s3" {
     encrypt        = "true"
-    dynamodb_table = "terraform-lock"
     bucket         = "chaos-engineer-target"
     key            = "chaos/terraform.tfstate"    
-    region         = "ap-southeast-2"
+    region         = "us-east-1"
     profile        = "saml"
   }
 }
