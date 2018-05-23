@@ -12,8 +12,6 @@ By default, Terraform script will look for
 ```
 terraform plan && terraform get
 
-terraform plan -var
-
 terraform plan -var 'master_account={13_digits_codes}' -var 'region={region_you_want}'
 
 terraform apply -var 'master_account={13_digits_codes}' -var 'region={region_you_want}'
