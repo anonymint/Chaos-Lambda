@@ -31,7 +31,8 @@ EOF
 }
 
 resource "aws_iam_role_policy" "role_policy_assume_role" {
-  name = "assume_role"
+  count = "${length(split(",", var.target_accounts))}"
+  name = "assume_role_target_${count.index}"
   role = "${aws_iam_role.lambda_role_accross_account.id}"
 
   policy = <<EOF
@@ -41,7 +42,7 @@ resource "aws_iam_role_policy" "role_policy_assume_role" {
         {
             "Effect": "Allow",
             "Action": "sts:AssumeRole",
-            "Resource": "arn:aws:iam::155347622759:role/chaos-engineer"
+            "Resource": "arn:aws:iam::${element(split(",", var.target_accounts), count.index)}:role/chaos-engineer"
         }
     ]
 }
@@ -215,7 +216,6 @@ provider "aws" {
 terraform {
   backend "s3" {
     encrypt        = "true"
-    dynamodb_table = "terraform-lock"
     bucket         = "chaos-engineer-master"
     key            = "chaos/terraform.tfstate"
     region         = "us-east-1"

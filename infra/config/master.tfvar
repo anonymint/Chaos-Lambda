@@ -1,4 +1,4 @@
 region="us-east-1"
 schedule_run=["cron(13 13-19 ? * MON-FRI *)"]
 prob="0.13"
-target_regions="us-east-1,us-west-1"
+target_regions="us-east-1,us-west-2"
