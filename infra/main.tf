@@ -217,7 +217,7 @@ terraform {
     encrypt        = "true"
     dynamodb_table = "terraform-lock"
     bucket         = "chaos-engineer-master"
-    key            = "chaos/master/terraform.tfstate"
+    key            = "chaos/terraform.tfstate"
     region         = "us-east-1"
     profile        = "saml"
   }
