@@ -101,10 +101,30 @@ data "aws_iam_policy_document" "lambda_role_policy" {
 # Lambda function
 ###
 
+resource "null_resource" "dependencies" {
+  triggers {
+    run = "${uuid()}"
+  }  
+  provisioner "local-exec" {
+    command = "pip install -r ${path.module}/../python_lib/requirements.txt -t ${path.module}/../python_lib/.tmp > output.txt 2>&1"
+  }
+}
+
+resource "null_resource" "zip_packages" {
+  triggers {
+    run = "${uuid()}"
+  }  
+  provisioner "local-exec" {
+    command = " (cd ${path.module}/../python_lib/.tmp/ && zip -r ${path.module}/chaos_package_2.zip ./*) && (cd ${path.module}/.. && zip ${path.module}/chaos_package_2.zip chaos.py)"
+  }
+  depends_on = ["null_resource.dependencies"]
+}
+
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_file = "${path.module}/../chaos.py"
   output_path = "${path.module}/chaos_package.zip"
+  depends_on = ["null_resource.dependencies"]
 }
 
 resource "aws_lambda_function" "chaos_lambda" {
@@ -114,8 +134,8 @@ resource "aws_lambda_function" "chaos_lambda" {
   //  role             = "${module.iam_assume_role.this_iam_role_arn}"
   role             = "${aws_iam_role.lambda_role_accross_account.arn}"
   runtime          = "python3.6"
-  source_code_hash = "${data.archive_file.lambda_zip.output_base64sha256}"
-  filename         = "${path.module}/chaos_package.zip"
+  source_code_hash = "${base64sha256(file("${path.module}/chaos_package_2.zip"))}"
+  filename         = "${path.module}/chaos_package_2.zip"
   timeout          = 6
 
   environment {
@@ -128,6 +148,7 @@ resource "aws_lambda_function" "chaos_lambda" {
       sns_alert_arn   = "${aws_sns_topic.alert.arn}"
     }
   }
+  depends_on = ["null_resource.zip_packages"]
 }
 
 resource "aws_lambda_permission" "allow_cloudwatch" {
