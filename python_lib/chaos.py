@@ -2,7 +2,6 @@ import os
 import random
 from time import strftime, gmtime
 import boto3
-import paramiko
 
 REGIONS_VAIRABLE_NAME = "regions"
 ASG_GROUP_NAME = "asg_group_name"
@@ -46,7 +45,7 @@ def run_chaos(accounts, regions, default_prob):
         for region in regions:
             asgs = get_asgs(account, region)
             instances = get_termination_instances(asgs, default_prob)
-            results.extend(terminate_instances(account, instances, region))
+            results.extend(run_chaos_each_account_region(account, instances, region))
     return results
 
 
@@ -96,29 +95,27 @@ def get_termination_instances(asgs, probability):
     return termination_instances
 
 
-def terminate_instances(account, instances, region):
+def run_chaos_each_account_region(account, instances, region):
     unleash_chaos = os.environ.get(TERMINATION_UNLEASH_NAME, "").strip()
     results = []
     for i in instances:
-        if not string_to_bool(unleash_chaos):
-            results.append(terminate_dry_run(i, region))
-        else:
-            results.append(terminate_no_point_of_return(account, i, region))
+        result = calling_tasks_random(account, i, region, dryrun=(not string_to_bool(unleash_chaos)))
+        results.append(result)
     return results
 
-def terminate_no_point_of_return(account, instance, region):
-    ec2 = assumRole(account, "ec2", region)
-    ec2.terminate_instances(InstanceIds=[instance[1]])
-    result = "TERMINATE", instance[1], "from", instance[0], "in", region
-    printlog(result)
-    return result
+# def terminate_no_point_of_return(account, instance, region):
+#     ec2 = assumRole(account, "ec2", region)
+#     ec2.terminate_instances(InstanceIds=[instance[1]])
+#     result = "TERMINATE", instance[1], "from", instance[0], "in", region
+#     printlog(result)
+#     return result
 
 
-def terminate_dry_run(instance, region):
-    result = "Terminate [DRY-RUN] {} from {} in {}".format(instance[1],
-                                                           instance[0], region)
-    printlog(result)
-    return result
+# def terminate_dry_run(instance, region):
+#     result = "Terminate [DRY-RUN] {} from {} in {}".format(instance[1],
+#                                                            instance[0], region)
+#     printlog(result)
+#     return result
 
 
 def printlog(*args):
@@ -189,16 +186,43 @@ def assumRole(account, service, region):
 """
 Chaos Tasks
 """
-def calling_tasks_random(account, i, region):
-    //random_task = 1 + int(random.random()*len(TASKS))
-    //TODO random TASKS[random_task][0]()! 
-    None
+def calling_tasks_random(account, i, region, dryrun=True):
+    random_task = random.randint(0, len(TASKS)-1)
+    task_to_run, descritpion = TASKS[random_task]
+    return task_to_run(account, i, region, dryrun) 
 
-def terminate_instance_worker():
-    None
 
-def max_cpu_worker():
-    None    
+def terminate_instance_worker(account, instance, region, dryrun=True):
+    if dryrun:
+        result = "Terminate [DRY-RUN] {} from {} in {}".format(instance[1],
+                                                           instance[0], region)
+        printlog(result)
+        return result
+    else:    
+        ec2 = assumRole(account, "ec2", region)
+        ec2.terminate_instances(InstanceIds=[instance[1]])
+        result = "TERMINATE", instance[1], "from", instance[0], "in", region
+        printlog(result)
+        return result
+
+
+def max_cpu_worker(account, instance, region, dryrun=True):
+    if dryrun:
+        result = "Max out CPU [DRY-RUN] {} from {} in {}".format(instance[1],
+                                                           instance[0], region)
+        printlog(result)
+        return result
+    else:
+        result = "Max out CPU {} from {} in {}".format(instance[1],
+                                                           instance[0], region)
+        ssm = assumRole(account, "ssm", region)
+        resp = ssm.send_command(
+            DocumentName="AWS-RunShellScript",
+            Parameters={'commands': ["cat << EOF > /tmp/infiniteburn.sh","#!/bin/bash","while true;"," do openssl speed;","done","EOF","","# 32 parallel 100% CPU tasks should hit even the biggest EC2 instances","for i in {1..32}","do"," nohup /bin/bash /tmp/infiniteburn.sh > /dev/null 2>&1 &","done"]},
+            InstanceIds=[instance[1]]
+        )
+        printlog(resp)
+        return result
 
 TASKS = [
     (terminate_instance_worker, "Terminate instances"),
@@ -217,3 +241,7 @@ def handler(event, context):
     global_prob = get_global_probability(DEFAULT_PROBABILITY)
     result = run_chaos(accounts, regions, global_prob)
     alert(result)
+
+# if __name__ == '__main__':
+#     # calling_tasks_random("152303423357", ["asg","i-06d3fe93310a66d69"], "us-east-1", dryrun=True)
+#     # max_cpu_worker("152303423357", ["asg","i-06d3fe93310a66d69"], "us-east-1", dryrun=False)
