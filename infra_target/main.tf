@@ -55,6 +55,49 @@ resource "aws_iam_role_policy" "role_policy_assume_role" {
       ],
       "Effect": "Allow",
       "Resource": "*"
+    },
+    {
+        "Effect": "Allow",
+        "Action": [
+            "ssm:CancelCommand",
+            "ssm:GetCommandInvocation",
+            "ssm:ListCommandInvocations",
+            "ssm:ListCommands",
+            "ssm:SendCommand"
+        ],
+        "Resource": [
+            "*"
+        ]
+    },
+    {
+        "Effect": "Allow",
+        "Action": [
+            "ec2:DescribeInstanceAttribute",
+            "ec2:DescribeInstanceStatus",
+            "ec2:DescribeInstances"
+        ],
+        "Resource": [
+            "*"
+        ]
+    },
+    {
+        "Effect": "Allow",
+        "Action": [
+            "resource-groups:ListGroups",
+            "resource-groups:ListGroupResources"
+        ],
+        "Resource": [
+            "*"
+        ]
+    },
+    {
+        "Effect": "Allow",
+        "Action": [
+            "tag:GetResources"
+        ],
+        "Resource": [
+            "*"
+        ]
     }
   ]
 }
@@ -68,10 +111,10 @@ provider "aws" {
 
 terraform {
   backend "s3" {
-    encrypt        = "true"
-    bucket         = "chaos-engineer-target"
-    key            = "chaos/terraform.tfstate"    
-    region         = "us-east-1"
-    profile        = "saml"
+    encrypt = "true"
+    bucket  = "chaos-engineer-target"
+    key     = "chaos/terraform.tfstate"
+    region  = "us-east-1"
+    profile = "saml"
   }
 }

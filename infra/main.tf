@@ -32,8 +32,8 @@ EOF
 
 resource "aws_iam_role_policy" "role_policy_assume_role" {
   count = "${length(split(",", var.target_accounts))}"
-  name = "assume_role_target_${count.index}"
-  role = "${aws_iam_role.lambda_role_accross_account.id}"
+  name  = "assume_role_target_${count.index}"
+  role  = "${aws_iam_role.lambda_role_accross_account.id}"
 
   policy = <<EOF
 {
@@ -101,30 +101,28 @@ data "aws_iam_policy_document" "lambda_role_policy" {
 # Lambda function
 ###
 
-resource "null_resource" "dependencies" {
-  triggers {
-    run = "${uuid()}"
-  }  
-  provisioner "local-exec" {
-    command = "pip install -r ${path.module}/../python_lib/requirements.txt -t ${path.module}/../python_lib/.tmp > output.txt 2>&1"
-  }
-}
+# resource "null_resource" "dependencies" {
+#   triggers {
+#     run = "${uuid()}"
+#   }  
+#   provisioner "local-exec" {
+#     command = "pip install -r ${path.module}/../python_lib/requirements.txt -t ${path.module}/../python_lib/.tmp > output.txt 2>&1"
+#   }
+# }
 
-resource "null_resource" "zip_packages" {
-  triggers {
-    run = "${uuid()}"
-  }  
-  provisioner "local-exec" {
-    command = " (cd ${path.module}/../python_lib/.tmp/ && zip -r ${path.module}/chaos_package_2.zip ./*) && (cd ${path.module}/.. && zip ${path.module}/chaos_package_2.zip chaos.py)"
-  }
-  depends_on = ["null_resource.dependencies"]
-}
+# resource "null_resource" "zip_packages" {
+#   triggers {
+#     run = "${uuid()}"
+#   }  
+#   provisioner "local-exec" {
+#     command = "(cd ${path.module}/../python_lib && make run)"
+#   }
+# }
 
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = "${path.module}/../chaos.py"
+  source_file = "${path.module}/../python_lib/chaos.py"
   output_path = "${path.module}/chaos_package.zip"
-  depends_on = ["null_resource.dependencies"]
 }
 
 resource "aws_lambda_function" "chaos_lambda" {
@@ -134,8 +132,8 @@ resource "aws_lambda_function" "chaos_lambda" {
   //  role             = "${module.iam_assume_role.this_iam_role_arn}"
   role             = "${aws_iam_role.lambda_role_accross_account.arn}"
   runtime          = "python3.6"
-  source_code_hash = "${base64sha256(file("${path.module}/chaos_package_2.zip"))}"
-  filename         = "${path.module}/chaos_package_2.zip"
+  source_code_hash = "${data.archive_file.lambda_zip.output_sha}"
+  filename         = "${data.archive_file.lambda_zip.output_path}"
   timeout          = 6
 
   environment {
@@ -148,7 +146,6 @@ resource "aws_lambda_function" "chaos_lambda" {
       sns_alert_arn   = "${aws_sns_topic.alert.arn}"
     }
   }
-  depends_on = ["null_resource.zip_packages"]
 }
 
 resource "aws_lambda_permission" "allow_cloudwatch" {
@@ -236,10 +233,10 @@ provider "aws" {
 
 terraform {
   backend "s3" {
-    encrypt        = "true"
-    bucket         = "chaos-engineer-master"
-    key            = "chaos/terraform.tfstate"
-    region         = "us-east-1"
-    profile        = "saml"
+    encrypt = "true"
+    bucket  = "chaos-engineer-master"
+    key     = "chaos/terraform.tfstate"
+    region  = "us-east-1"
+    profile = "saml"
   }
 }
