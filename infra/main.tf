@@ -121,8 +121,24 @@ data "aws_iam_policy_document" "lambda_role_policy" {
 
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = "${path.module}/../python_lib/chaos.py"
-  output_path = "${path.module}/chaos_package.zip"
+
+  source {
+    content  = "${file("${path.module}/../src/chaos.py")}"
+    filename = "chaos.py"
+  }
+
+  source {
+    content  = "${file("${path.module}/../src/helper.py")}"
+    filename = "helper.py"
+  }
+
+  source {
+    content  = "${file("${path.module}/../src/tasks.py")}"
+    filename = "tasks.py"
+  }
+
+  # source_file = "${path.module}/../python_lib/chaos.py"
+  output_path = "${path.module}/../src/out/chaos_package.zip"
 }
 
 resource "aws_lambda_function" "chaos_lambda" {
@@ -184,8 +200,8 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 # TODO send alert if killing happen
 data "archive_file" "microsoft_connector_zip" {
   type        = "zip"
-  source_file = "${path.module}/hook.py"
-  output_path = "${path.module}/hook_package.zip"
+  source_file = "${path.module}/../src/hook.py"
+  output_path = "${path.module}/../src/out/hook_package.zip"
 }
 
 resource "aws_lambda_function" "hook_lambda" {
@@ -228,15 +244,4 @@ resource "aws_sns_topic_subscription" "lambda_sub" {
 
 provider "aws" {
   region  = "${var.region}"
-  profile = "saml"
-}
-
-terraform {
-  backend "s3" {
-    encrypt = "true"
-    bucket  = "chaos-engineer-master"
-    key     = "chaos/terraform.tfstate"
-    region  = "us-east-1"
-    profile = "saml"
-  }
 }

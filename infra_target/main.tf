@@ -106,7 +106,6 @@ EOF
 
 provider "aws" {
   region  = "${var.region}"
-  profile = "saml"
 }
 
 terraform {
@@ -115,6 +114,5 @@ terraform {
     bucket  = "chaos-engineer-target"
     key     = "chaos/terraform.tfstate"
     region  = "us-east-1"
-    profile = "saml"
   }
 }
