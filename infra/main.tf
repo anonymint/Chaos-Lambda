@@ -120,7 +120,7 @@ data "aws_iam_policy_document" "lambda_role_policy" {
 # }
 
 data "archive_file" "lambda_zip" {
-  type        = "zip"
+  type = "zip"
 
   source {
     content  = "${file("${path.module}/../src/chaos.py")}"
@@ -244,4 +244,5 @@ resource "aws_sns_topic_subscription" "lambda_sub" {
 
 provider "aws" {
   region  = "${var.region}"
+  profile = "${var.profile}"
 }

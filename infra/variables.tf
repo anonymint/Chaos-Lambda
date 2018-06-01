@@ -1,3 +1,8 @@
+variable profile {
+  description = "AWS profile you want to use"
+  default     = "default"
+}
+
 variable "hook_url" {
   description = "The Microsoft team hook url"
 }

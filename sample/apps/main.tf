@@ -116,7 +116,12 @@ variable region {
   default     = "us-east-1"
 }
 
+variable profile {
+  description = "AWS profile you want to use"
+  default     = "default"
+}
+
 provider "aws" {
   region  = "${var.region}"
-  profile = "saml"
+  profile = "${var.profile}"
 }
